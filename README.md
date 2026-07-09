@@ -201,7 +201,7 @@ Chennai-UHI-Analysis/
 
 ```
 @misc{chennai_uhi_2025,
-  author = {Outcast},
+  author = {Jeevan},
   title = {Chennai Urban Heat Island Analysis using Google Earth Engine},
   year = {2025},
   publisher = {GitHub},
@@ -213,13 +213,13 @@ Chennai-UHI-Analysis/
 
 ## Related Repository
 
-Chennai Flood Vulnerability Mapping: https://github.com/yourusername/Chennai-Flood-Vulnerability-Mapping
+Chennai Flood Vulnerability Mapping: https://github.com/jeevanmp99/Chennai-Flood-Vulnerability-Mapping
 
 ---
 
 ## Acknowledgements
 
-This work was carried out as part of the ClimAct-Chennai Programme at the Indian National Health and Habitat Foundation (INHAF), in collaboration with the Citizen consumer and civic Action Group (CAG), Chennai.
+This work was carried out as part of the ClimAct-Chennai Programme at the Indian Habitat Forum (INHAF).
 
 ---
 
