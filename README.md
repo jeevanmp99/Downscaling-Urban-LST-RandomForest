@@ -181,17 +181,18 @@ The structural plateau of ECOSTRESS downscaling ($R^2 = 0.266$) highlights a wel
 
 ```text
 Downscaling-Urban-LST-RandomForest/
-├── README.md                          <-- Technical Project Report
-├── requirements.txt                    <-- Python Package Dependencies
-├── LICENSE                            <-- MIT License
+├── figures/                           <-- Cartographic output maps (300 DPI PNG)
+│   ├── Fig1_Daytime_Macro_Landsat.png
+│   ├── Fig2_Nighttime_Macro_ECOSTRESS.png
+│   ├── Fig3_Daytime_Micro_MRC.png
+│   ├── Fig4_Nighttime_Micro_MRC.png
+│   └── Fig5_Biophysical_Predictors.png
 ├── src/
-│   └── downscale_lst_pipeline.py      <-- Modular Pipeline Script
-└── figures/                           <-- Cartographic Figures (300 DPI)
-    ├── Fig1_Daytime_Macro_Landsat.png
-    ├── Fig2_Nighttime_Macro_ECOSTRESS.png
-    ├── Fig3_Daytime_Micro_MRC.png
-    ├── Fig4_Nighttime_Micro_MRC.png
-    └── Fig5_Biophysical_Predictors.png
+│   └── downscale_lst_pipeline.py      <-- Unified training and inference pipeline
+├── LICENSE                            <-- MIT License
+├── README.md                          <-- Core project report and technical documentation
+├── Sample data.zip                    <-- Sample raster subsets for testing and replication
+└── requirements.txt                   <-- Python package dependencies
 ```
 
 ---
