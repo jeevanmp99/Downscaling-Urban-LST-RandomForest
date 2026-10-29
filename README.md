@@ -1,228 +1,221 @@
-# Chennai Urban Heat Island (UHI) Analysis
-### Land Surface Temperature and UHI Intensity Mapping using Google Earth Engine
+# Multi-Sensor Urban Land Surface Temperature (LST) Downscaling (10m)
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Google%20Earth%20Engine-green.svg)
-![Language](https://img.shields.io/badge/language-JavaScript-yellow.svg)
-![Status](https://img.shields.io/badge/status-Active-brightgreen.svg)
+An end-to-end remote sensing and machine learning pipeline to downscale daytime Landsat 8 TIRS (30 m) and nocturnal ECOSTRESS (70 m) thermal infrared imagery to **10 m spatial resolution** using Sentinel-2 MSI biophysical covariates and Random Forest regression.
 
 ---
 
-## Overview
+## Executive Summary
 
-This repository contains the Google Earth Engine (GEE) JavaScript code for mapping Urban Heat Island (UHI) intensity across the Chennai Metropolitan Area, Tamil Nadu, India. The analysis derives **Land Surface Temperature (LST)** from Landsat 8 thermal infrared imagery and calculates **UHI intensity** as the deviation of each pixel from the city-wide mean LST.
+Satellite-derived Land Surface Temperature (LST) is historically constrained by a fundamental trade-off between spatial and temporal resolution: thermal infrared sensors operate at coarse spatial resolutions (30 m to 1 km), limiting their operational utility for parcel-level urban microclimate planning.
 
-The analysis was conducted as part of the **ClimAct-Chennai Programme** at INHAF, focusing on identifying thermally vulnerable communities and urban zones experiencing extreme heat stress.
+This project implements an **Area-To-Point Random Forest regression framework** with **energy-conserving residual correction** to disaggregate coarse thermal observations across a **51 km² inland transect in Chennai, India**. By modeling non-linear empirical relationships between high-resolution multispectral reflectance, derived spectral indices, terrain covariates, and coarse thermal targets, the pipeline downscales daytime and nocturnal LST to Sentinel-2's 10 m pixel grid.
 
----
-
-## Study Area
-
-**Chennai Metropolitan Area, Tamil Nadu, India**
-- Latitude: 12°51'N to 13°13'N
-- Longitude: 80°03'E to 80°20'E
-- Climate: Tropical wet and dry
-- Peak heat period: March–May (Summer, pre-monsoon)
-- Mean annual temperature: ~28°C
-- Population: ~7.1 million
-
-Chennai experiences intense urban heat due to rapid urbanisation, high built-up density, loss of green cover, coastal humidity, and the urban canyon effect in dense residential and commercial zones.
+### Key Performance Findings
+* **Daytime (Landsat 8 TIRS):** Achieved an **$R^2$ of 0.756** and **RMSE of 1.51 °C**, effectively resolving intra-urban thermal gradients and parcel boundaries.
+* **Nocturnal (ECOSTRESS TIS):** Reached a structural limit of **$R^2 = 0.266$** and **RMSE = 0.69 °C**, empirically confirming that passive daytime optical reflectance cannot adequately capture nocturnal thermal inertia and heat capacity without structural or radar-derived proxies.
 
 ---
 
-## Methodology
+## Study Domain & Environmental Setting
 
-### Workflow
+The study area covers an inland transect of **51 km²** centered over south-central Chennai, Tamil Nadu, India, projected in **WGS 84 / UTM Zone 44N (EPSG:32644)**.
 
-```
-Study Area Definition (Ward Boundary Shapefile)
-        ↓
-Landsat 8 Image Collection (Mar-May 2025, <10% cloud)
-        ↓
-Thermal Band Extraction (ST_B10)
-        ↓
-LST Conversion to Celsius
-(DN × 0.00341802 + 149.0 - 273.15)
-        ↓
-City-wide Mean LST Calculation
-        ↓
-UHI Intensity = LST - Mean LST
-        ↓
-Spectral Indices (NDVI, NDBI, MNDWI)
-        ↓
-Export GeoTIFF → ArcGIS Pro / QGIS
-```
+**Coordinate Bounds (UTM Zone 44N):**
 
-### LST Conversion Formula
+* Easting  : 411,000 m E  to  419,000 m E
 
-Landsat 8 Collection 2 Level-2 thermal band (ST_B10) values are converted from digital numbers to degrees Celsius using the official USGS scale and offset:
-
-```
-LST (°C) = (ST_B10 × 0.00341802) + 149.0 − 273.15
-```
-
-Where:
-- 0.00341802 = scale factor
-- 149.0 = additive offset (Kelvin)
-- 273.15 = conversion from Kelvin to Celsius
-
-### UHI Intensity
-
-UHI intensity is calculated as the per-pixel deviation from the city-wide mean LST:
-
-```
-UHI Intensity = LST(pixel) − Mean LST(city)
-```
-
-- Positive values → warmer than city average → Urban Heat Island zones
-- Negative values → cooler than city average → Urban Cool Island zones
-- Zero → equal to city mean temperature
-
-### Spectral Indices
-
-| Index | Formula | Interpretation |
-|---|---|---|
-| NDVI | (NIR-RED)/(NIR+RED) | Vegetation cover — low NDVI = high heat |
-| NDBI | (SWIR1-NIR)/(SWIR1+NIR) | Built-up surfaces — high NDBI = high heat |
-| MNDWI | (GREEN-SWIR1)/(GREEN+SWIR1) | Water bodies — high MNDWI = cooling effect |
+* Northing : 1,435,000 m N to 1,441,000 m N
 
 ---
 
-## Data Used
-
-| Dataset | Provider | GEE Catalog ID | Resolution | Period |
-|---|---|---|---|---|
-| Landsat 8 OLI/TIRS C2 L2 | NASA / USGS | LANDSAT/LC08/C02/T1_L2 | 30m optical / 100m thermal | Mar–May 2025 |
-| Ward Boundary | Local body / User provided | GEE Asset | Vector | Current |
-
-### Bands Used
-
-| Band | Name | Wavelength | Use |
-|---|---|---|---|
-| ST_B10 | Thermal Infrared | 10.60–11.19 μm | LST derivation |
-| SR_B3 | Green | 0.53–0.59 μm | MNDWI |
-| SR_B4 | Red | 0.64–0.67 μm | NDVI |
-| SR_B5 | NIR | 0.85–0.88 μm | NDVI, NDBI |
-| SR_B6 | SWIR1 | 1.57–1.65 μm | NDBI, MNDWI |
+The domain deliberately isolates inland urban fabric to eliminate maritime advection boundaries from the Bay of Bengal. It captures critical microclimatic heterogeneities:
+* **The Guindy National Park & IIT Madras Forest Reserve:** A major urban vegetation sink and evaporative cool island.
+* **The Madras Race Club (MRC):** An unpaved, bare-soil infield acting as a local daytime thermal anomaly.
+* **Dense Commercial & Residential Corridors:** High-density built-up surfaces along Anna Salai, Guindy Industrial Estate, and Velachery.
 
 ---
 
-## Outputs
+## Sensor Specifications & Data Inventory
 
-| Output | Description | Value Range |
-|---|---|---|
-| LST (°C) | Land Surface Temperature in Celsius | ~25°C – 45°C |
-| UHI Intensity | Deviation from city mean LST | ~-5°C to +5°C |
-| NDVI | Normalised Difference Vegetation Index | -1 to 1 |
-| NDBI | Normalised Difference Built-up Index | -1 to 1 |
-| MNDWI | Modified Normalised Difference Water Index | -1 to 1 |
+All spatial layers were preprocessed, clipped to the 51 km² transect, and registered to a uniform UTM Zone 44N spatial reference grid.
 
----
-
-## Exported Files
-
-| File | Description |
-|---|---|
-| Chennai_UHI_2025.tif | UHI intensity map (GeoTIFF, EPSG:32644) |
-| Chennai_UHI_2025.2.tif | UHI intensity map with proper mask applied |
+| Dataset / Sensor | Platform | Spatial Resolution | Acquisition Date | Spectral Bands / Attributes | Primary Source / Engine |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Sentinel-2 MSI** | Sentinel-2B | 10 m (B2, B3, B4, B8)<br>20 m (B11, B12) | 25-March-2024 | Bands 2, 3, 4, 8, 11, 12 | ESA Copernicus / GEE |
+| **Landsat 8 TIRS** | Landsat 8 | 30 m (Native 100 m resampled) | 03-April-2024 | Band 10 (Split Window LST °C) | USGS / Earth Engine |
+| **ECOSTRESS TIS** | ISS | 70 m (Native 70 m) | 08-April-2024 | Nocturnal LST (°C) | NASA LP DAAC / GEE |
+| **SRTM DEM** | Shuttle Radar | 30 m | Static Topography | Elevation, Slope, Aspect | NASA / USGS |
 
 ---
 
-## How to Use
-
-### Prerequisites
-- Google Earth Engine account (free at earthengine.google.com)
-- Ward boundary shapefile uploaded as GEE asset
-
-### Steps
-
-1. Open Google Earth Engine Code Editor: https://code.earthengine.google.com
-2. Copy the contents of GEE_Scripts/Chennai_UHI_Analysis.js
-3. Paste into a new GEE script
-4. Update the asset path:
-
-```javascript
-var chennai = ee.FeatureCollection('projects/YOUR_PROJECT/assets/YOUR_WARD_SHAPEFILE');
-```
-
-5. Click Run
-6. Go to Tasks tab and click Run for each export
-
-### Recommended Date Ranges for Chennai
-
-| Period | Season | UHI Characteristic |
-|---|---|---|
-| Mar–May | Summer (pre-monsoon) | Peak UHI, highest LST |
-| Jun–Sep | Southwest Monsoon | Reduced UHI, cloud cover issues |
-| Oct–Dec | Northeast Monsoon | Moderate UHI |
-| Jan–Feb | Winter | Lowest LST, clearest skies |
-
----
-
-## Connection to Flood Vulnerability
-
-This UHI analysis is part of a dual vulnerability assessment for Chennai:
-
-1. Flood Vulnerability Map → https://github.com/yourusername/Chennai-Flood-Vulnerability-Mapping
-2. Heat Vulnerability Map → This repository
-
-Overlaying both maps identifies communities facing compound climate risk — simultaneous flood and heat vulnerability — which are the priority zones for INHAF community engagement under the ClimAct-Chennai programme.
-
----
-
-## Limitations
-
-- Landsat 8 thermal band has 100m native resolution, resampled to 30m
-- Cloud cover during monsoon season limits temporal coverage
-- LST represents surface temperature, not air temperature
-- Single-date median composite may not capture peak heat events
-- Community-level heat stress requires additional socioeconomic vulnerability indicators
-
----
-
-## File Structure
-
-```
-Chennai-UHI-Analysis/
+## Methodology & Algorithmic Workflow
+```text
+[10m Sentinel-2 Bands & SRTM DEM]
 │
-├── README.md                        # This file
-├── LICENSE                          # MIT License
-├── GEE_Scripts/
-│   └── Chennai_UHI_Analysis.js      # Main GEE script
-├── Results/
-│   └── README.md                    # Results description
-└── Docs/
-    └── Data_Sources.md              # Detailed data documentation
+├──> Calculate Indices: NDVI, NDBI, BSI, MNDWI, Slope, Aspect
+│
+▼
+[10m Predictor Stack (13 Features)]
+│
+├──> Average Resampling (to 30m / 70m Grid)
+│
+▼
+[Coarse Aggregated Predictor Stack]
+│
+├──> Train Random Forest Regressor (Target: Coarse LST)
+│    (n_estimators=100, max_depth=26, min_samples_split=4)
+│
+▼
+[10m Model Inference] ──> Baseline Downscaled LST (10m)
+│
+├──> Downscale Residuals (Coarse Target - Resampled Baseline)
+│    (Interpolated via Cubic Spline to 10m)
+│
+▼
+[Corrected Downscaled LST (10m)] (Energy-Conserving Final Output)
 ```
+---
+
+### 1. Biophysical Index Formulations
+The 13-feature input space combines visible, near-infrared, shortwave-infrared bands, derived biophysical indices, and terrain parameters:
+
+| Index | Full Name | Sentinel-2 Formulation | Biophysical Role |
+| :--- | :--- | :--- | :--- |
+| **NDVI** | Normalized Difference Vegetation Index | $\frac{B8 - B4}{B8 + B4}$ | Canopy density, latent heat flux, vegetative cooling |
+| **NDBI** | Normalized Difference Built-Up Index | $\frac{B11 - B8}{B11 + B8}$ | Impervious concrete/asphalt surface differentiation |
+| **BSI** | Bare Soil Index | $\frac{(B11 + B4) - (B8 + B2)}{(B11 + B4) + (B8 + B2)}$ | Exposed dry soil and unpaved parcel detection |
+| **MNDWI** | Modified Normalized Difference Water Index | $\frac{B3 - B11}{B3 + B11}$ | Open water extraction and surface moisture content |
+
+### 2. Random Forest Regressor Architecture
+* **Target Aggregation:** 10 m predictors are averaged across coarse thermal pixels ($30\times30\text{ m}$ for Landsat, $70\times70\text{ m}$ for ECOSTRESS) to match scale physics without artificial interpolation.
+* **Hyperparameters:** `n_estimators=100`, `max_depth=26`, `min_samples_split=4`, `min_samples_leaf=2`, `n_jobs=-1`.
+* **Out-of-Sample Validation:** 80/20 train/test random split on coarse cells.
+
+### 3. Energy-Conserving Residual Correction
+Downscaling models inevitably introduce local bias. To ensure thermal energy conservation, coarse-scale residuals are extracted and distributed back to the 10 m baseline:
+$$\text{Residual}_{\text{coarse}} = \text{LST}_{\text{observed, coarse}} - \overline{\text{LST}}_{\text{predicted, coarse}}$$
+$$\text{LST}_{\text{final, 10m}} = \text{LST}_{\text{predicted, 10m}} + \mathcal{I}_{\text{cubic}}(\text{Residual}_{\text{coarse}})$$
 
 ---
 
-## Citation
+## Empirical Results & Visual Analysis
 
+### Model Performance Metrics
+
+| Target Sensor | Acquisition Time | Resolution Step | Valid Training Pixels ($N$) | Validation RMSE | Validation $R^2$ |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Landsat 8 TIRS** | Daytime (~10:30 AM) | $30\text{ m} \rightarrow 10\text{ m}$ | 56,918 | **1.51 °C** | **0.756** |
+| **ECOSTRESS TIS** | Nocturnal (~10:45 PM) | $70\text{ m} \rightarrow 10\text{ m}$ | 10,366 | **0.69 °C** | **0.266** |
+
+---
+
+### Figure 1: Daytime Macro-Scale Sharpening (Landsat 8)
+![Figure 1: Daytime Macro-Scale Sharpening](figures/Fig1_Daytime_Macro_Landsat.png)
+* **Finding:** The 10 m product resolves intra-urban temperature variations across Guindy National Park and major arterial corridors while strictly preserving the regional $31^\circ\text{C}$ to $54^\circ\text{C}$ thermal distribution. Coarse pixelation along the Adyar river is completely removed.
+
+---
+
+### Figure 2: Nocturnal Macro-Scale Sharpening (ECOSTRESS)
+![Figure 2: Nocturnal Macro-Scale Sharpening](figures/Fig2_Nighttime_Macro_ECOSTRESS.png)
+* **Finding:** Nocturnal surface temperatures display a narrow dynamic range ($25^\circ\text{C}$ to $31^\circ\text{C}$). The model captures the general cool boundary of the national park, but exhibits block smoothing due to the coarse 70 m residual grid and lower model explained variance.
+
+---
+
+### Figure 3: Microclimate Ground-Truthing — Daytime (Madras Race Club)
+![Figure 3: Microclimate Ground-Truthing Daytime](figures/Fig3_Daytime_Micro_MRC.png)
+* **Finding:** High-resolution validation over the Madras Race Club (MRC) and adjacent Guindy reserve. The 10 m downscaling isolates the racetrack geometry: the exposed, dry bare soil of the infield spikes to $>50^\circ\text{C}$, sharply contrasting with the vegetated canopy ($<35^\circ\text{C}$) immediately across the boundary. The raw 30 m Landsat image smudges these boundaries into an indistinct heat blur.
+
+---
+
+### Figure 4: Microclimate Ground-Truthing — Nocturnal (Madras Race Club)
+![Figure 4: Microclimate Ground-Truthing Nocturnal](figures/Fig4_Nighttime_Micro_MRC.png)
+* **Finding:** Bare soil that heats up to $>50^\circ\text{C}$ during the daytime rapidly sheds heat at night due to low volumetric thermal capacity, cooling to near-park baseline levels ($~26^\circ\text{C}$). The adjacent dense concrete structures retain daytime heat, showing up as elevated nocturnal thermal signatures.
+
+---
+
+### Figure 5: Biophysical Predictor Stack & Terrain Covariates
+![Figure 5: Biophysical Predictor Stack](figures/Fig5_Biophysical_Predictors.png)
+* **Finding:** Spatial distribution of high-resolution Sentinel-2 derivatives (NDVI, NDBI, BSI, MNDWI) and SRTM elevation across the 51 km² transect used as training inputs for the Random Forest pipeline.
+
+---
+
+## Predictor Importance Analysis
+
+Relative feature contributions extracted from the Random Forest models:
+
+| Rank | Predictor Layer | Description / Band | Daytime Landsat Weight (%) | Nocturnal ECOSTRESS Weight (%) |
+| :---: | :--- | :--- | :---: | :---: |
+| **1** | `B12_10m` | SWIR-2 Reflectance (2190 nm) | **22.1%** | 7.7% |
+| **2** | `NDBI_10m` | Normalized Difference Built-Up Index | **15.3%** | 6.6% |
+| **3** | `BSI_10m` | Bare Soil Index | **12.9%** | 6.5% |
+| **4** | `NDVI_10m` | Normalized Difference Vegetation Index | **9.4%** | **10.6%** |
+| **5** | `B02_10m` | Blue Reflectance (490 nm) | 7.9% | 9.8% |
+| **6** | `B04_10m` | Red Reflectance (665 nm) | 5.7% | 7.3% |
+| **7** | `B11_10m` | SWIR-1 Reflectance (1610 nm) | 5.6% | 6.7% |
+| **8** | `B03_10m` | Green Reflectance (560 nm) | 4.2% | 7.2% |
+| **9** | `Slope_10m` | Terrain Slope | 4.2% | 7.2% |
+| **10** | `DEM_10m` | Surface Elevation (SRTM) | 3.6% | 8.7% |
+| **11** | `MNDWI_10m` | Modified Water Index | 3.6% | 9.1% |
+| **12** | `B08_10m` | NIR Reflectance (842 nm) | 3.4% | 6.5% |
+| **13** | `Aspect_10m` | Terrain Aspect | 2.1% | 6.1% |
+
+### Physical Interpretations
+* **Daytime Mechanism:** The top four predictors (**B12, NDBI, BSI, NDVI**) account for **59.7% of total feature importance**. The daytime model operates directly on physical surface energy exchange: SWIR absorption and impervious/bare soil coverage dictate sensible heat, while green canopy regulates latent cooling.
+* **Nocturnal Disconnect:** Feature weights for ECOSTRESS are flat and evenly distributed across all 13 predictors (each hovering between 6% and 10%). The trees find no distinct physical linkage because optical top-of-canopy reflectance at 10:30 AM cannot capture nocturnal longwave radiation release.
+
+---
+
+## Addressing the Nocturnal Bottleneck
+
+The structural plateau of ECOSTRESS downscaling ($R^2 = 0.266$) highlights a well-documented physical limitation in urban climatology: **at night, thermal emission is controlled by volumetric heat capacity and thermal inertia, not optical albedo**.
+
+### Roadmap for Operational Nocturnal Improvement
+1. **Sentinel-1 SAR C-Band Backscatter (10 m):** Incorporating dual-polarized (VV and VH) SAR backscatter captures building geometry, vertical wall density, and 3D urban structural mass through double-bounce microwave scattering, directly proxying nocturnal heat retention.
+2. **Apparent Thermal Inertia (ATI):** Deriving multi-temporal thermal resistance ($\text{ATI} = \frac{1 - \text{Albedo}}{\Delta \text{LST}}$) from diurnal temperature swings ($\text{LST}_{\text{day}} - \text{LST}_{\text{night}}$) to supply the model with physical cooling rates.
+3. **Building Morphology & Sky View Factor (SVF):** Integrating building footprint density and height data (e.g., OpenStreetMap or Global Building footprints) to account for nocturnal radiation trapping within street canyons.
+
+---
+
+## Repository Structure
+
+```text
+Downscaling-Urban-LST-RandomForest/
+├── README.md                          <-- Technical Project Report
+├── requirements.txt                    <-- Python Package Dependencies
+├── LICENSE                            <-- MIT License
+├── src/
+│   └── downscale_lst_pipeline.py      <-- Modular Pipeline Script
+└── figures/                           <-- Cartographic Figures (300 DPI)
+    ├── Fig1_Daytime_Macro_Landsat.png
+    ├── Fig2_Nighttime_Macro_ECOSTRESS.png
+    ├── Fig3_Daytime_Micro_MRC.png
+    ├── Fig4_Nighttime_Micro_MRC.png
+    └── Fig5_Biophysical_Predictors.png
 ```
-@misc{chennai_uhi_2025,
-  author = {Jeevan},
-  title = {Chennai Urban Heat Island Analysis using Google Earth Engine},
-  year = {2025},
-  publisher = {GitHub},
-  url = {https://github.com/yourusername/Chennai-UHI-Analysis}
-}
-```
+Installation & Execution
+1. Environment Setup
+Bash
+git clone [https://github.com/](https://github.com/)<your-username>/Downscaling-Urban-LST-RandomForest.git
+cd Downscaling-Urban-LST-RandomForest
+pip install -r requirements.txt
+2. Running Downscaling Pipeline
+Run the modular pipeline for either thermal sensor target:
 
----
+Bash
+# Daytime Landsat Downscaling
+python src/downscale_lst_pipeline.py \
+    --data_dir ./data/50_sqkm \
+    --output_dir ./downscaled_output \
+    --target LANDSAT
 
-## Related Repository
+# Nocturnal ECOSTRESS Downscaling
+python src/downscale_lst_pipeline.py \
+    --data_dir ./data/50_sqkm \
+    --output_dir ./downscaled_output \
+    --target ECOSTRESS
+Citation & References
+Bechtel, B., et al. (2012). Downscaling of thermal infrared remote sensing data using random forest regression. Remote Sensing of Environment.
 
-Chennai Flood Vulnerability Mapping: https://github.com/jeevanmp99/Chennai-Flood-Vulnerability-Mapping
+Weng, Q., Lu, D., & Schubring, J. (2004). Estimation of land surface temperature–vegetation abundance relationship for urban heat island studies. Remote Sensing of Environment.
 
----
-
-## Acknowledgements
-
-This work was carried out as part of the ClimAct-Chennai Programme at the Indian Habitat Forum (INHAF).
-
----
-
-## License
-
-MIT License — see LICENSE file for details.
+Hulley, G. C., et al. (2019). High spatial resolution imaging of thermal land surface temperature from the ECOSTRESS mission. Advances in Space Research.
