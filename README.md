@@ -1,4 +1,10 @@
 # Multi-Sensor Urban Land Surface Temperature (LST) Downscaling (10m)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
+![Framework](https://img.shields.io/badge/Engine-Rasterio%20%7C%20Scikit--Learn-brightgreen)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Model](https://img.shields.io/badge/Model-Random%20Forest%20(100%20Trees)-4c1)
+![Daytime Landsat R²](https://img.shields.io/badge/Landsat%20R%C2%B2-0.756-success)
+![Nocturnal ECOSTRESS R²](https://img.shields.io/badge/ECOSTRESS%20R%C2%B2-0.266-orange)
 
 An end-to-end remote sensing and machine learning pipeline to downscale daytime Landsat 8 TIRS (30 m) and nocturnal ECOSTRESS (70 m) thermal infrared imagery to **10 m spatial resolution** using Sentinel-2 MSI biophysical covariates and Random Forest regression.
 
@@ -11,8 +17,8 @@ Satellite-derived Land Surface Temperature (LST) is historically constrained by 
 This project implements an **Area-To-Point Random Forest regression framework** with **energy-conserving residual correction** to disaggregate coarse thermal observations across a **51 km² inland transect in Chennai, India**. By modeling non-linear empirical relationships between high-resolution multispectral reflectance, derived spectral indices, terrain covariates, and coarse thermal targets, the pipeline downscales daytime and nocturnal LST to Sentinel-2's 10 m pixel grid.
 
 ### Key Performance Findings
-* **Daytime (Landsat 8 TIRS):** Achieved an **$R^2$ of 0.756** and **RMSE of 1.51 °C**, effectively resolving intra-urban thermal gradients and parcel boundaries.
-* **Nocturnal (ECOSTRESS TIS):** Reached a structural limit of **$R^2 = 0.266$** and **RMSE = 0.69 °C**, empirically confirming that passive daytime optical reflectance cannot adequately capture nocturnal thermal inertia and heat capacity without structural or radar-derived proxies.
+* **Daytime (Landsat 8 TIRS):** Achieved an **R² = 0.756** and **RMSE = 1.51 °C**, effectively resolving intra-urban thermal gradients and parcel boundaries.
+* **Nocturnal (ECOSTRESS TIS):** Reached a structural limit of **R² = 0.266** and **RMSE = 0.69 °C**, empirically confirming that passive daytime optical reflectance cannot adequately capture nocturnal thermal inertia and heat capacity without structural or radar-derived proxies.
 
 ---
 
@@ -20,19 +26,11 @@ This project implements an **Area-To-Point Random Forest regression framework** 
 
 The study area covers an inland transect of **51 km²** centered over south-central Chennai, Tamil Nadu, India, projected in **WGS 84 / UTM Zone 44N (EPSG:32644)**.
 
-**Coordinate Bounds (UTM Zone 44N):**
-
-* Easting  : 411,000 m E  to  419,000 m E
-
-* Northing : 1,435,000 m N to 1,441,000 m N
-
----
-
-The domain deliberately isolates inland urban fabric to eliminate maritime advection boundaries from the Bay of Bengal. It captures critical microclimatic heterogeneities:
-* **The Guindy National Park & IIT Madras Forest Reserve:** A major urban vegetation sink and evaporative cool island.
-* **The Madras Race Club (MRC):** An unpaved, bare-soil infield acting as a local daytime thermal anomaly.
-* **Dense Commercial & Residential Corridors:** High-density built-up surfaces along Anna Salai, Guindy Industrial Estate, and Velachery.
-
+```text
+Coordinate Bounds (UTM Zone 44N):
+  Easting  : 411,000 m E  to  419,000 m E
+  Northing : 1,435,000 m N to 1,441,000 m N
+```
 ---
 
 ## Sensor Specifications & Data Inventory
@@ -51,29 +49,30 @@ All spatial layers were preprocessed, clipped to the 51 km² transect, and regis
 ## Methodology & Algorithmic Workflow
 ```text
 [10m Sentinel-2 Bands & SRTM DEM]
-│
-├──> Calculate Indices: NDVI, NDBI, BSI, MNDWI, Slope, Aspect
-│
-▼
-[10m Predictor Stack (13 Features)]
-│
-├──> Average Resampling (to 30m / 70m Grid)
-│
-▼
-[Coarse Aggregated Predictor Stack]
-│
-├──> Train Random Forest Regressor (Target: Coarse LST)
-│    (n_estimators=100, max_depth=26, min_samples_split=4)
-│
-▼
-[10m Model Inference] ──> Baseline Downscaled LST (10m)
-│
-├──> Downscale Residuals (Coarse Target - Resampled Baseline)
-│    (Interpolated via Cubic Spline to 10m)
-│
-▼
-[Corrected Downscaled LST (10m)] (Energy-Conserving Final Output)
+                 │
+                 ├──> Calculate Indices: NDVI, NDBI, BSI, MNDWI, Slope, Aspect
+                 │
+                 ▼
+        [10m Predictor Stack (13 Features)]
+                 │
+                 ├──> Average Resampling (to 30m / 70m Grid)
+                 │
+                 ▼
+        [Coarse Aggregated Predictor Stack]
+                 │
+                 ├──> Train Random Forest Regressor (Target: Coarse LST)
+                 │    (n_estimators=100, max_depth=26, min_samples_split=4)
+                 │
+                 ▼
+        [10m Model Inference] ──> Baseline Downscaled LST (10m)
+                 │
+                 ├──> Downscale Residuals (Coarse Target - Resampled Baseline)
+                 │    (Interpolated via Cubic Spline to 10m)
+                 │
+                 ▼
+     [Corrected Downscaled LST (10m)] (Energy-Conserving Final Output)
 ```
+
 ---
 
 ### 1. Biophysical Index Formulations
@@ -93,8 +92,10 @@ The 13-feature input space combines visible, near-infrared, shortwave-infrared b
 
 ### 3. Energy-Conserving Residual Correction
 Downscaling models inevitably introduce local bias. To ensure thermal energy conservation, coarse-scale residuals are extracted and distributed back to the 10 m baseline:
-$$\text{Residual}_{\text{coarse}} = \text{LST}_{\text{observed, coarse}} - \overline{\text{LST}}_{\text{predicted, coarse}}$$
-$$\text{LST}_{\text{final, 10m}} = \text{LST}_{\text{predicted, 10m}} + \mathcal{I}_{\text{cubic}}(\text{Residual}_{\text{coarse}})$$
+
+* **Residual_coarse =** LST_observed_coarse - Mean(LST_predicted_coarse)
+
+* **LST_final_10m =** LST_predicted_10m + Cubic_Interpolation(Residual_coarse)
 
 ---
 
@@ -192,30 +193,45 @@ Downscaling-Urban-LST-RandomForest/
     ├── Fig4_Nighttime_Micro_MRC.png
     └── Fig5_Biophysical_Predictors.png
 ```
-Installation & Execution
-1. Environment Setup
-Bash
-git clone [https://github.com/](https://github.com/)<your-username>/Downscaling-Urban-LST-RandomForest.git
+
+---
+
+## Installation & Execution
+
+### 1. Environment Setup
+
+Clone the repository and install the required dependencies:
+
+```bash
+git clone [https://github.com/jeevanmp99/Downscaling-Urban-LST-RandomForest.git](https://github.com/jeevanmp99/Downscaling-Urban-LST-RandomForest.git)
 cd Downscaling-Urban-LST-RandomForest
 pip install -r requirements.txt
-2. Running Downscaling Pipeline
-Run the modular pipeline for either thermal sensor target:
+```
 
-Bash
-# Daytime Landsat Downscaling
+### 2. Running the Downscaling Pipeline
+
+Execute the pipeline via terminal for either sensor target using the CLI flags below:
+
+* Option A: Daytime Landsat 8 TIRS Downscaling (30m → 10m)
+
+```Bash
 python src/downscale_lst_pipeline.py \
     --data_dir ./data/50_sqkm \
     --output_dir ./downscaled_output \
     --target LANDSAT
-
-# Nocturnal ECOSTRESS Downscaling
+```
+* Option B: Nocturnal ECOSTRESS TIS Downscaling (70m → 10m)
+```Bash
 python src/downscale_lst_pipeline.py \
     --data_dir ./data/50_sqkm \
     --output_dir ./downscaled_output \
     --target ECOSTRESS
-Citation & References
-Bechtel, B., et al. (2012). Downscaling of thermal infrared remote sensing data using random forest regression. Remote Sensing of Environment.
+```
 
-Weng, Q., Lu, D., & Schubring, J. (2004). Estimation of land surface temperature–vegetation abundance relationship for urban heat island studies. Remote Sensing of Environment.
+---
 
-Hulley, G. C., et al. (2019). High spatial resolution imaging of thermal land surface temperature from the ECOSTRESS mission. Advances in Space Research.
+## Citation & References
+
+1. **Colaninno, N. (2026).** Multi-Sensor Random Forest Downscaling for 10 m LST Mapping and Urban Heat Island Monitoring in a Small-Sized City. *The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences*, XLIX-B3-2026, 355–362. https://doi.org/10.5194/isprs-archives-XLIX-B3-2026-355-2026
+2. **Park, N.-W., Kim, Y., & Kwak, G.-H. (2019).** An Overview of Theoretical and Practical Issues in Spatial Downscaling of Coarse Resolution Satellite-derived Products. *Korean Journal of Remote Sensing*, 35(4), 589–607. https://doi.org/10.7780/kjrs.2019.35.4.8
+```[cite: 12, 20]
