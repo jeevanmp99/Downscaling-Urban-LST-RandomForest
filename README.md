@@ -234,4 +234,3 @@ python src/downscale_lst_pipeline.py \
 
 1. **Colaninno, N. (2026).** Multi-Sensor Random Forest Downscaling for 10 m LST Mapping and Urban Heat Island Monitoring in a Small-Sized City. *The International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences*, XLIX-B3-2026, 355–362. https://doi.org/10.5194/isprs-archives-XLIX-B3-2026-355-2026
 2. **Park, N.-W., Kim, Y., & Kwak, G.-H. (2019).** An Overview of Theoretical and Practical Issues in Spatial Downscaling of Coarse Resolution Satellite-derived Products. *Korean Journal of Remote Sensing*, 35(4), 589–607. https://doi.org/10.7780/kjrs.2019.35.4.8
-```[cite: 12, 20]
